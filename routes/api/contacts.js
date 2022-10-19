@@ -1,16 +1,13 @@
 const express = require("express");
 const Joi = require("joi");
-const {
-  listContacts,
-  getContactById,
-  addContact,
-  removeContact,
-  updateContact,
-} = require("../../models/contacts");
+const Contacts = require("../../models/contacts");
+
+const Сontacts = require("../../models/contacts");
+
 const router = express.Router();
 
 router.get("/", async (req, res, next) => {
-  const contacts = await listContacts();
+  const contacts = await Сontacts.find();
 
   res.json({
     status: 200,
@@ -19,7 +16,8 @@ router.get("/", async (req, res, next) => {
 });
 
 router.get("/:contactId", async (req, res, next) => {
-  const contact = await getContactById(req.params.contactId);
+  const { contactId } = req.params;
+  const contact = await Сontacts.findById(contactId);
 
   if (contact === undefined) {
     res.json({ status: 404, message: "Not found" });
@@ -30,7 +28,7 @@ router.get("/:contactId", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   const { name, email, phone } = req.body;
- 
+
   const schema = Joi.object({
     name: Joi.string()
       .min(3)
@@ -42,6 +40,7 @@ router.post("/", async (req, res, next) => {
       .min(3)
       .pattern(/^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/)
       .required(),
+    favorite: Joi.boolean(),
   });
 
   const validation = schema.validate(req.body);
@@ -53,9 +52,8 @@ router.post("/", async (req, res, next) => {
     });
   }
 
-  const contact = await addContact({ name, email, phone });
-
-  
+  const contact =  new Contacts({ name, email, phone });
+  await contact.save();
   if (!contact) {
     return res.json({ status: 500, message: "Internal server error" });
   }
@@ -63,7 +61,8 @@ router.post("/", async (req, res, next) => {
 });
 
 router.delete("/:contactId", async (req, res, next) => {
-  const contact = await removeContact(req.params.contactId);
+  const {contactId} = req.params
+  const contact = await Contacts.findByIdAndRemove(contactId);
   if (contact === null) {
     res.json({ status: 404, message: "Not found" });
     return;
@@ -73,6 +72,7 @@ router.delete("/:contactId", async (req, res, next) => {
 
 router.put("/:contactId", async ({ params, body }, res, next) => {
   const schema = Joi.object({
+    _id: Joi.string(),
     name: Joi.string()
       .min(3)
       .max(100)
@@ -83,6 +83,7 @@ router.put("/:contactId", async ({ params, body }, res, next) => {
       .min(3)
       .pattern(/^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/)
       .required(),
+    favorite: Joi.boolean(),
   });
 
   const validation = schema.validate(body);
@@ -94,7 +95,21 @@ router.put("/:contactId", async ({ params, body }, res, next) => {
     });
   }
 
-  const contact = await updateContact(params.contactId, body);
+  const contact = await Contacts.findByIdAndUpdate(params.contactId, body, {
+    new: true,
+  });
+  contact
+    ? res.json({ status: 200, contact })
+    : res.json({ status: 404, message: "Not found" });
+});
+
+router.put("/:contactId/favorite", async ({ params, body }, res, next) => {
+  if (!body) {
+    return res.json({ status: 400, message: "missing field favorite" });
+  }
+  const contact = await Contacts.findByIdAndUpdate(params.contactId, body, {
+    new: true,
+  });
   contact
     ? res.json({ status: 200, contact })
     : res.json({ status: 404, message: "Not found" });
