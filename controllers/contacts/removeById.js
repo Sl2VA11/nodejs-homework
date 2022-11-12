@@ -1,8 +1,9 @@
 const { NotFound } = require("http-errors");
 const { Contact } = require("../../models");
-const getById = async (req, res) => {
+
+const removeById = async (req, res) => {
   const { contactId } = req.params;
-  const result = await Contact.findById(contactId);
+  const result = await Contact.findByIdAndRemove(contactId);
   if (!result) {
     throw new NotFound(`Контакт з таким id=${contactId} в базі не знайдено!`);
   }
@@ -10,10 +11,11 @@ const getById = async (req, res) => {
   res.json({
     status: "success",
     code: 200,
+    message: "Контакт видалено",
     data: {
-      result: result,
+      result,
     },
   });
 };
 
-module.exports = getById;
+module.exports = removeById;
